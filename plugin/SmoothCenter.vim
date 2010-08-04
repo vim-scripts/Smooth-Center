@@ -4,6 +4,12 @@
 " | START                                                                       |
 " +-----------------------------------------------------------------------------+
 " | REVISONS:                                                                   |
+" | WED 5TH AUG 2010:    1.2                                                    |
+" |                      Had a bug where the end cases were not being detected  |
+" |                      properly, the top of the file and the end of the file  |
+" |                      respectively. I got them confused, so it looked like   |
+" |                      the scrolling wouldn't start if the first line was     |
+" |                      showing when you press S-Esc.                          |
 " | SAT 1ST AUG 2010:    1.1                                                    |
 " |                      Cured the glitch that the centering is not centering   |
 " |                      when the end of the file is not as far as the bottom   |
@@ -55,14 +61,14 @@ function DoSmoothCenter()
 :	endif
 :	if g:smoothcentering == 2
 :		let centerline = line("w0")
-:		if line("w0")==1
+:		if line("w0")==line("$")
 :			let g:smoothcentering = 0
 :			return
 :		endif
 :	endif
 :	if g:smoothcentering == 3
 :		let centerline = line("w$")
-:		if line("w0")==line("$")
+:		if line("w0")==1
 :			let g:smoothcentering = 0
 :			return
 :		endif
@@ -90,3 +96,4 @@ endfunction
 " +-----------------------------------------------------------------------------+
 " | SMOOTH CENTER                                                               |
 " +-----------------------------------------------------------------------------+
+
