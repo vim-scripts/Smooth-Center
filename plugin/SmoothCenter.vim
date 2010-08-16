@@ -4,6 +4,11 @@
 " | START                                                                       |
 " +-----------------------------------------------------------------------------+
 " | REVISONS:                                                                   |
+" | MON 16TH AUG 2010:   1.5                                                    |
+" |                      Sorted out some funky messy logic where 'zb' equivalent|
+" |                      in normal vim in Smooth Center did not work, if the    |
+" |                      cursor was parked on the last line. (S-ESC).  Nothing  |
+" |                      happened.  Obviously fixed it now so that it does.     |
 " | SAT 8TH AUG 2010:    1.4                                                    |
 " |                      Fixed a subtle bug that meant that if scrolloff>0 the  |
 " |                      display would keep on centering but not immediately.   |
@@ -41,11 +46,6 @@
 " |                      and shift-F1 respectively.  So now you've got all zz,  |
 " |                      zt & zb as smooth-equivalents: ESC, S-ESC and S-F1     |
 " |                      respectively.                                          |
-" | WED 8TH JUL 2010:    1.0                                                    |
-" |                      Initial revision. There is a small glitch when file is |
-" |                      is less then the end of the window, the centering will |
-" |                      continue until the cursor is in the center of the      |
-" |                      visible area of the file, not the true 'center'.       |
 " +-----------------------------------------------------------------------------+
 
 autocmd CursorHold * call DoSmoothCenter()
@@ -61,54 +61,64 @@ map <S-Esc> :call StartSmoothCentering(3)<CR>:<BS>
 function StartSmoothCentering(centermode)
 :	if g:smoothcentering==0
 :		let g:smoothcentering = a:centermode
+:		if a:centermode==1
+:			let g:movinglinevector = (line("w0")+line("w0")+winheight(0))/2
+:		endif
 :		return
 :	endif
 :	let g:smoothcentering = 0
 endfunction
 
-" Do the centering --if-- flag is set
+" do centering if g:smoothcentering set, this acts as the 'control' flag 
 function DoSmoothCenter()
 :	if g:smoothcentering == 0
 :		return
 :	endif
+" -- centering case
 :	if g:smoothcentering == 1
-:		let centerline = (line("w0")+line("w0")+winheight(0))/2
-:		if centerline>line("$")
+:		let movinglinevector = (line("w0")+line("w0")+winheight(0))/2
+:		if movinglinevector>line("$")
 :			let g:smoothcentering = 0
 :			return
 :		endif
-:		if line("w0")==1 && line(".")<centerline
+:		if line("w0")==1 && line(".")<movinglinevector
 :			let g:smoothcentering = 0
 :			return
 :		endif
 :	endif
+" -- i scroll up screen such that user pov move down file?
 :	if g:smoothcentering == 2
-:		let centerline = line("w0")+eval("&scrolloff")
+:		let movinglinevector = line("w0")+eval("&scrolloff")
 :		if line("w0")==line("$")
 :			let g:smoothcentering = 0
 :			return
 :		endif
 :	endif
+" -- i scroll down screen such that pov moves up file?
 :	if g:smoothcentering == 3
-:		let centerline = line("w$")-eval("&scrolloff")
-:		if line("w0")==1+eval("&scrolloff")
+:		let movinglinevector = line("w0")+winheight(0)-eval("&scrolloff")
+:		if line("w0")==1
 :			let g:smoothcentering = 0
 :			return
 :		endif
 :	endif
 :	let changeflag = 0
-:	if line(".")>centerline
+" -- set scroll up screen such that pov moves down file
+:	if line(".")>movinglinevector
 :		let changeflag = 1 
 :	endif
-:	if line(".")<centerline
+" -- set scroll down screen such that pov moves up file
+:	if line(".")<movinglinevector
 :		let changeflag = 2
 :	endif
-:	if line(".")==centerline
+:	if line(".")==movinglinevector
 :		let g:smoothcentering = 0
 :	endif
+" -- do scroll up screen such that user pov move down file 
 :	if changeflag==1
 :       	exe "normal \<C-e>"
 :	endif
+" -- do scroll down screen such that user pov move up file
 :	if changeflag==2
 :		exe "normal \<C-y>"
 :	endif
