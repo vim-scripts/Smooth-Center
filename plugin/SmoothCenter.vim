@@ -4,6 +4,15 @@
 " | START                                                                       |
 " +-----------------------------------------------------------------------------+
 " | REVISONS:                                                                   |
+" | MON 16TH AUG 2010:   1.6                                                    |
+" |                      Had a slight glitch that happened but not always when  |
+" |                      you did Shift-ESC, the scrolling would just continue.  |
+" |                      Not sure why but fixed it and checked it so that this  |
+" |                      does not happen.  Had a bug that caused the continuing |
+" |                      of scrolling when line wrapping was on. This gave      |
+" |                      incorrect readings for the window height so that       |
+" |                      scrolling would continue.  Fixed this by putting in a  |
+" |                      check that warns you if wrap is on, and doesn't scroll.|
 " | MON 16TH AUG 2010:   1.5                                                    |
 " |                      Sorted out some funky messy logic where 'zb' equivalent|
 " |                      in normal vim in Smooth Center did not work, if the    |
@@ -38,14 +47,6 @@
 " |                      respectively. I got them confused, so it looked like   |
 " |                      the scrolling wouldn't start if the first line was     |
 " |                      showing when you press S-Esc.                          |
-" | SAT 1ST AUG 2010:    1.1                                                    |
-" |                      Cured the glitch that the centering is not centering   |
-" |                      when the end of the file is not as far as the bottom   |
-" |                      of the window.  Added a couple of new modes, these act |
-" |                      just like zt and zb in normal mode. They are shift-ESC |
-" |                      and shift-F1 respectively.  So now you've got all zz,  |
-" |                      zt & zb as smooth-equivalents: ESC, S-ESC and S-F1     |
-" |                      respectively.                                          |
 " +-----------------------------------------------------------------------------+
 
 autocmd CursorHold * call DoSmoothCenter()
@@ -60,9 +61,13 @@ map <S-Esc> :call StartSmoothCentering(3)<CR>:<BS>
 
 function StartSmoothCentering(centermode)
 :	if g:smoothcentering==0
-:		let g:smoothcentering = a:centermode
-:		if a:centermode==1
-:			let g:movinglinevector = (line("w0")+line("w0")+winheight(0))/2
+:		if eval("&wrap")==1
+:			echo input("smooth centering not supported with wrap!!")
+:		else
+:			let g:smoothcentering = a:centermode
+:			if a:centermode==1
+:				let g:movinglinevector = (line("w0")+line("w0")+winheight(0))/2
+:			endif
 :		endif
 :		return
 :	endif
@@ -96,7 +101,7 @@ function DoSmoothCenter()
 :	endif
 " -- i scroll down screen such that pov moves up file?
 :	if g:smoothcentering == 3
-:		let movinglinevector = line("w0")+winheight(0)-eval("&scrolloff")
+:		let movinglinevector = line("w0")+winheight(0)-1-eval("&scrolloff")
 :		if line("w0")==1
 :			let g:smoothcentering = 0
 :			return
