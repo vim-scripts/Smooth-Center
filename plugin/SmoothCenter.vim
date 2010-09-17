@@ -4,6 +4,13 @@
 " | START                                                                       |
 " +-----------------------------------------------------------------------------+
 " | REVISONS:                                                                   |
+" | FRI 17TH SEP 2010:   1.7                                                    |
+" |                      Made improvements to scroll till cursor is on top and  |
+" |                      cursor is at bottom cases.  These work very reliably   |
+" |                      when in folded mode.  The center case is not quite     |
+" |                      stable but kind of works, there are still some         |
+" |                      glitches in folded mode and when the buffer is         |
+" |                      scrolled near the bottom.                              |
 " | MON 16TH AUG 2010:   1.6                                                    |
 " |                      Had a slight glitch that happened but not always when  |
 " |                      you did Shift-ESC, the scrolling would just continue.  |
@@ -41,18 +48,12 @@
 " |                      Feels more natural because you think of ESC as getting |
 " |                      you 'out' of something, rather than go deeper into it  |
 " |                      the way it was previously.                             |
-" | WED 5TH AUG 2010:    1.2                                                    |
-" |                      Had a bug where the end cases were not being detected  |
-" |                      properly, the top of the file and the end of the file  |
-" |                      respectively. I got them confused, so it looked like   |
-" |                      the scrolling wouldn't start if the first line was     |
-" |                      showing when you press S-Esc.                          |
 " +-----------------------------------------------------------------------------+
 
 autocmd CursorHold * call DoSmoothCenter()
 
 " This variable controls whether smooth center should be 'centering'
-let g:smoothcentering = 0
+let g:centermode = 0
 
 " this maps Escape key to start centering
 map <Esc> :call StartSmoothCentering(1)<CR>:<BS>
@@ -60,72 +61,54 @@ map <S-F1> :call StartSmoothCentering(2)<CR>:<BS>
 map <S-Esc> :call StartSmoothCentering(3)<CR>:<BS>
 
 function StartSmoothCentering(centermode)
-:	if g:smoothcentering==0
-:		if eval("&wrap")==1
-:			echo input("smooth centering not supported with wrap!!")
-:		else
-:			let g:smoothcentering = a:centermode
-:			if a:centermode==1
-:				let g:movinglinevector = (line("w0")+line("w0")+winheight(0))/2
-:			endif
-:		endif
+:	if g:centermode==0
+:		let g:centermode = a:centermode
 :		return
 :	endif
-:	let g:smoothcentering = 0
+:	let g:centermode = 0
 endfunction
 
-" do centering if g:smoothcentering set, this acts as the 'control' flag 
+" do centering if g:centermode set, this acts as the 'control' flag 
 function DoSmoothCenter()
-:	if g:smoothcentering == 0
+:	if g:centermode == 0
 :		return
 :	endif
-" -- centering case
-:	if g:smoothcentering == 1
-:		let movinglinevector = (line("w0")+line("w0")+winheight(0))/2
-:		if movinglinevector>line("$")
-:			let g:smoothcentering = 0
-:			return
+" -- centering mode
+:	if g:centermode == 1
+:		let hiddenlines = line("w$")-line("w0")-winheight(0)
+:		let targetline = line("w0")+hiddenlines+line("w$")
+:		let endshortfall = winheight(0)-(line("w$")-line("w0"))
+:		if endshortfall<0
+:			let endshortfall = 0
 :		endif
-:		if line("w0")==1 && line(".")<movinglinevector
-:			let g:smoothcentering = 0
-:			return
-:		endif
-:	endif
-" -- i scroll up screen such that user pov move down file?
-:	if g:smoothcentering == 2
-:		let movinglinevector = line("w0")+eval("&scrolloff")
-:		if line("w0")==line("$")
-:			let g:smoothcentering = 0
-:			return
+:		let targetline = targetline/2
+:		if line(".")>targetline
+:			exe "normal \<C-e>"
+:		elseif line(".")<targetline
+:			exe "normal \<C-y>"
+:		else
+:			let g:centermode = 0
 :		endif
 :	endif
-" -- i scroll down screen such that pov moves up file?
-:	if g:smoothcentering == 3
-:		let movinglinevector = line("w0")+winheight(0)-1-eval("&scrolloff")
-:		if line("w0")==1
-:			let g:smoothcentering = 0
-:			return
+" -- scroll up screen such that pov moves down file
+:	if g:centermode == 2
+:		if line("w0")<line(".")
+:			exe "normal \<C-e>"
+:		else
+:			let g:centermode = 0
 :		endif
 :	endif
-:	let changeflag = 0
-" -- set scroll up screen such that pov moves down file
-:	if line(".")>movinglinevector
-:		let changeflag = 1 
-:	endif
-" -- set scroll down screen such that pov moves up file
-:	if line(".")<movinglinevector
-:		let changeflag = 2
-:	endif
-:	if line(".")==movinglinevector
-:		let g:smoothcentering = 0
-:	endif
-" -- do scroll up screen such that user pov move down file 
-:	if changeflag==1
-:       	exe "normal \<C-e>"
-:	endif
-" -- do scroll down screen such that user pov move up file
-:	if changeflag==2
-:		exe "normal \<C-y>"
+" -- scroll down screen such that pov moves up file
+:	if g:centermode == 3
+:		if line("w$")>line(".")
+:			if line("w0")==1
+:				let g:centermode = 0
+:			else
+:				exe "normal \<C-y>"
+:			endif
+:		else
+:			let g:centermode = 0
+:		endif
 :	endif
 endfunction
 
